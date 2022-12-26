@@ -3,58 +3,60 @@
 
 MainWindow::MainWindow()
 {
+    //draw
+    drawings = new Draw(nullptr);
+
     // Create a layout for the main window
-        mainLayout = new QVBoxLayout(this);
+    mainLayout = new QVBoxLayout(this);
+    // Create a toolbar with buttons for adding gates
+    toolbarLayout = new QHBoxLayout();
+    mainLayout->addLayout(toolbarLayout);
+    // Add a button for adding an AND gate
+    QPushButton* andButton = new QPushButton("Add AND gate");
+    connect(andButton, SIGNAL(clicked()), this, SLOT(addAndGate()));
+    toolbarLayout->addWidget(andButton);
+    // Add a button for adding an OR gate
+    QPushButton* orButton = new QPushButton("Add OR gate");
+    connect(orButton, SIGNAL(clicked()), this, SLOT(addOrGate()));
+    toolbarLayout->addWidget(orButton);
+    // Add a button for adding an NOT gate
+    QPushButton* notButton = new QPushButton("Add NOT gate");
+    connect(notButton, SIGNAL(clicked()), this, SLOT(addNotGate()));
+    toolbarLayout->addWidget(notButton);
 
-        // Create a toolbar with buttons for adding gates
-        toolbarLayout = new QHBoxLayout();
-        mainLayout->addLayout(toolbarLayout);
+    //graphics
+    graphicsLayout = new QHBoxLayout;
+    canvas = new QGraphicsView;
+    scene = new QGraphicsScene;
+    canvas->setScene(scene);
+    graphicsLayout->addWidget(canvas);
+    mainLayout->addLayout(graphicsLayout);
+    // Create a layout for the gates
+    gatesLayout = new QHBoxLayout();
+    mainLayout->addLayout(gatesLayout);
+    //icons
+    andGateIcon.load("/home/muchubatactics/ccpp/project/man/1x/and.png");
+    orGateIcon.load("/home/muchubatactics/ccpp/project/man/1x/or.png");
+    notGateIcon.load("/home/muchubatactics/ccpp/project/man/1x/not.png");
+    //setting icons
+    andButton->setIcon(andGateIcon);
+    orButton->setIcon(orGateIcon);
+    notButton->setIcon(notGateIcon);
 
-        // Add a button for adding an AND gate
-        QPushButton* andButton = new QPushButton("Add AND gate");
-        connect(andButton, SIGNAL(clicked()), this, SLOT(addAndGate()));
-        toolbarLayout->addWidget(andButton);
-
-        // Add a button for adding an OR gate
-        QPushButton* orButton = new QPushButton("Add OR gate");
-        connect(orButton, SIGNAL(clicked()), this, SLOT(addOrGate()));
-        toolbarLayout->addWidget(orButton);
-
-        // Add a button for adding an NOT gate
-        QPushButton* notButton = new QPushButton("Add NOT gate");
-        connect(notButton, SIGNAL(clicked()), this, SLOT(addNotGate()));
-        toolbarLayout->addWidget(notButton);
-
-        //graphics
-        graphicsLayout = new QHBoxLayout;
-        canvas = new QGraphicsView;
-        scene = new QGraphicsScene;
-        canvas->setScene(scene);
-        graphicsLayout->addWidget(canvas);
-        mainLayout->addLayout(graphicsLayout);
-
-        // Create a layout for the gates
-        gatesLayout = new QHBoxLayout();
-        mainLayout->addLayout(gatesLayout);
-
-        //icons
-        andGateIcon.load(":/1x/and.png");
-        orGateIcon.load(":/1x/or.png");
-        notGateIcon.load(":/1x/not.png");
+    //drawing
+    drawButton = new QPushButton("Draw");
+    drawButton->setCheckable(true);
+    //QObject::connect(drawButton, &QPushButton::clicked, [&](){drawButton->setChecked(!drawButton->isChecked());});
+    toolbarLayout->addWidget(drawButton);
+    drawings->setButton(drawButton);
+    scene->addItem(drawings);
 
 
-        //setting icons
-        andButton->setIcon(andGateIcon);
-        orButton->setIcon(orGateIcon);
-        notButton->setIcon(notGateIcon);
-
-
-
-        // Add some initial gates to the layout
-        // addAndGate();
-        // addOrGate();
+    // Add some initial gates to the layout
+    // addAndGate();
+    // addOrGate();
 }
-
+QPushButton* Draw::button = nullptr;
 void MainWindow::addAndGate()
 {
     AndGate* andgate = new AndGate(nullptr);
@@ -89,7 +91,7 @@ LogicGate::LogicGate(QGraphicsItem* parent = nullptr) : QGraphicsItem(parent)
 
 void LogicGate::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton)
+    if (event->button() == Qt::LeftButton && !Draw::button->isChecked())
     {
         moving = true;
         lastMousePos = event->pos();
@@ -118,7 +120,7 @@ void LogicGate::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
 void LogicGate::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton)
+    if (event->button() == Qt::LeftButton && !Draw::button->isChecked())
     {
         moving = false;
         event->accept();
@@ -287,4 +289,61 @@ void NotGate::setInputs(bool a)
 bool NotGate::getOutput() const
 {
     return output;
+}
+
+
+//drawing
+
+Draw::Draw(QGraphicsItem* parent = nullptr) : QGraphicsItem(parent)
+{
+    currentPath = new QPainterPath;
+} 
+
+QRectF Draw::boundingRect() const
+{
+    return QRectF(0, 0, 1920, 1080);
+}
+
+void Draw::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr)
+{
+    QPen pen;
+    pen.setWidth(5);
+    painter->setPen(pen);
+    for(QPainterPath* path : allPaths)
+    {
+        painter->drawPath(*path);
+    }
+}
+
+void Draw::mousePressEvent(QGraphicsSceneMouseEvent *event)
+{
+    if(button->isChecked())
+    {
+        currentPath->moveTo(event->pos());
+        update();    
+    }
+}
+
+void Draw::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
+{
+    if(button->isChecked())
+    {
+        currentPath->lineTo(event->pos());
+        update();
+    }
+}
+
+void Draw::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+{
+    if(button->isChecked())
+    {
+        allPaths.append(currentPath);
+        currentPath = new QPainterPath;
+        update();
+    }
+}
+
+void Draw::setButton(QPushButton* bb)
+{
+    button = bb;
 }
