@@ -166,21 +166,6 @@ void MainWindow::addAndGate()
     gatelay->addWidget(outputy);
     gatesLayout->addLayout(gatelay);
 
-    QObject::connect(inputa, &QLineEdit::textChanged, [&]() {
-        bool a = (inputa->text() == "1");
-        bool b = (inputb->text() == "1");
-        andgate->setInputs(a, b);
-        outputy->setText(andgate->getOutput() ? "1" : "0");
-    });
-    QObject::connect(inputb, &QLineEdit::textChanged, [&]() {
-        bool a = (inputa->text() == "1");
-        bool b = (inputb->text() == "1");
-        andgate->setInputs(a, b);
-        outputy->setText(andgate->getOutput() ? "1" : "0");
-    });
-
-
-
 }
 
 void MainWindow::addOrGate()
