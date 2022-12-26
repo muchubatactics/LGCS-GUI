@@ -1,98 +1,3 @@
-
-//logic Gate Class
-// class LogicGate
-// {
-// public:
-//     LogicGate(QString name, int numInputs, int numOutputs)
-//         : m_name(name), m_numInputs(numInputs), m_numOutputs(numOutputs)
-//     {
-//         // Create labels for the gate's inputs and outputs
-//         for (int i = 0; i < numInputs; i++)
-//         {
-//             m_inputLabels.append(new QLabel("0"));
-//         }
-//         for (int i = 0; i < numOutputs; i++)
-//         {
-//             m_outputLabels.append(new QLabel("0"));
-//         }
-//     }
-//     QString name() const { return m_name; }
-
-//     // Get the number of inputs and outputs
-//     int numInputs() const { return m_numInputs; }
-//     int numOutputs() const { return m_numOutputs; }
-
-//     // Get the labels for the inputs and outputs
-//     const QList<QLabel*>& inputLabels() const { return m_inputLabels; }
-//     const QList<QLabel*>& outputLabels() const { return m_outputLabels; }
-
-// private:
-//     // The name of the gate
-//     QString m_name;
-
-//     // The number of inputs and outputs
-//     int m_numInputs;
-//     int m_numOutputs;
-
-//     // Labels for the inputs and outputs
-//     QList<QLabel*> m_inputLabels;
-//     QList<QLabel*> m_outputLabels;
-
-// };
-
-// void MainWindow::addAndGate()
-// {
-//     // Create a new AND gate
-//     LogicGate* andGate = new LogicGate("AND", 2, 1);
-//     // Create a layout for the AND gate
-//     QVBoxLayout* gateLayout = new QVBoxLayout();
-//     gatesLayout->addLayout(gateLayout);
-//     // Add the name of the gate to the layout
-//     QLabel* nameLabel = new QLabel(andGate->name());
-//     gateLayout->addWidget(nameLabel);
-//     // Add the input labels to the layout
-//     QHBoxLayout* inputsLayout = new QHBoxLayout();
-//     gateLayout->addLayout(inputsLayout);
-//     foreach (QLabel* inputLabel, andGate->inputLabels())
-//     {
-//         inputsLayout->addWidget(inputLabel);
-//     }
-//     // Add the output labels to the layout
-//     QHBoxLayout* outputsLayout = new QHBoxLayout();
-//     gateLayout->addLayout(outputsLayout);
-//     foreach (QLabel* outputLabel, andGate->outputLabels())
-//     {
-//         outputsLayout->addWidget(outputLabel);
-//     }
-// }
-
-// void MainWindow::addOrGate()
-// {
-//     // Create a new OR gate
-//     LogicGate* orGate = new LogicGate("OR", 2, 1);
-//     // Create a layout for the OR gate
-//     QVBoxLayout* gateLayout = new QVBoxLayout();
-//     gatesLayout->addLayout(gateLayout);
-//     // Add the name of the gate to the layout
-//     QLabel* nameLabel = new QLabel(orGate->name());
-//     gateLayout->addWidget(nameLabel);
-//     // Add the input labels to the layout
-//     QHBoxLayout* inputsLayout = new QHBoxLayout();
-//     gateLayout->addLayout(inputsLayout);
-//     foreach (QLabel* inputLabel, orGate->inputLabels())
-//     {
-//         inputsLayout->addWidget(inputLabel);
-//     }
-//     // Add the output labels to the layout
-//     QHBoxLayout* outputsLayout = new QHBoxLayout();
-//     gateLayout->addLayout(outputsLayout);
-//     foreach (QLabel* outputLabel, orGate->outputLabels())
-//     {
-//         outputsLayout->addWidget(outputLabel);
-//     }   
-
-// }
-
 #include "window.h"
 #include <iostream>
 
@@ -154,17 +59,7 @@ void MainWindow::addAndGate()
 {
     AndGate* andgate = new AndGate(nullptr);
     scene->addItem(andgate);
-    QVBoxLayout* gatelay = new QVBoxLayout;
-    QLabel *gatename = new QLabel;
-    gatename->setText(andgate->getName());
-    gatelay->addWidget(gatename);
-    QLineEdit *inputa = new QLineEdit;
-    QLineEdit *inputb = new QLineEdit;
-    QLabel *outputy = new QLabel;
-    gatelay->addWidget(inputa);
-    gatelay->addWidget(inputb);
-    gatelay->addWidget(outputy);
-    gatesLayout->addLayout(gatelay);
+    gatesLayout->addLayout(andgate->getlayout());
 
 }
 
@@ -172,17 +67,7 @@ void MainWindow::addOrGate()
 {
     OrGate* orgate = new OrGate(nullptr);
     scene->addItem(orgate);
-    QVBoxLayout* gatelay = new QVBoxLayout;
-    QLabel *gatename = new QLabel;
-    gatename->setText(orgate->getName());
-    gatelay->addWidget(gatename);
-    QLineEdit *inputa = new QLineEdit;
-    QLineEdit *inputb = new QLineEdit;
-    QLabel *outputy = new QLabel;
-    gatelay->addWidget(inputa);
-    gatelay->addWidget(inputb);
-    gatelay->addWidget(outputy);
-    gatesLayout->addLayout(gatelay);
+    gatesLayout->addLayout(orgate->getlayout());
 
 }
 
@@ -190,15 +75,7 @@ void MainWindow::addNotGate()
 {
     NotGate* notgate = new NotGate(nullptr);
     scene->addItem(notgate);
-    QVBoxLayout* gatelay = new QVBoxLayout;
-    QLabel *gatename = new QLabel;
-    gatename->setText(notgate->getName());
-    gatelay->addWidget(gatename);
-    QLineEdit *inputa = new QLineEdit;
-    QLabel *outputy = new QLabel;
-    gatelay->addWidget(inputa);
-    gatelay->addWidget(outputy);
-    gatesLayout->addLayout(gatelay);
+    gatesLayout->addLayout(notgate->getlayout());
 
 }
 
@@ -259,9 +136,31 @@ QRectF LogicGate::boundingRect() const
 
 AndGate::AndGate(QGraphicsItem *parent) : LogicGate(parent)
 {
+    gatelay = new QVBoxLayout;
+    gatename = new QLabel;
+    gatename->setText(this->getName());
+    gatelay->addWidget(gatename);
+    inputa = new QLineEdit;
+    inputb = new QLineEdit;
+    outputy = new QLabel;
+    gatelay->addWidget(inputa);
+    gatelay->addWidget(inputb);
+    gatelay->addWidget(outputy);
+
+
+    QObject::connect(inputa, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
+    QObject::connect(inputb, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
 
 }
 
+void AndGate::updateOutput(QString)
+{
+    bool a = (inputa->text() == "1");
+    bool b = (inputb->text() == "1");
+    this->setInputs(a,b);
+    outputy->setText(this->getOutput() ? "1" : "0");
+
+}
 void AndGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     //AND gate symbol
@@ -291,6 +190,28 @@ bool AndGate::getOutput() const
 
 OrGate::OrGate(QGraphicsItem *parent = nullptr) : LogicGate(parent)
 {
+    gatelay = new QVBoxLayout;
+    gatename = new QLabel;
+    gatename->setText(this->getName());
+    gatelay->addWidget(gatename);
+    inputa = new QLineEdit;
+    inputb = new QLineEdit;
+    outputy = new QLabel;
+    gatelay->addWidget(inputa);
+    gatelay->addWidget(inputb);
+    gatelay->addWidget(outputy);
+
+    QObject::connect(inputa, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
+    QObject::connect(inputb, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
+
+}
+
+void OrGate::updateOutput(QString)
+{
+    bool a = (inputa->text() == "1");
+    bool b = (inputb->text() == "1");
+    this->setInputs(a,b);
+    outputy->setText(this->getOutput() ? "1" : "0");
 
 }
 
@@ -323,7 +244,25 @@ bool OrGate::getOutput() const
 
 NotGate::NotGate(QGraphicsItem *parent = nullptr) : LogicGate(parent)
 {
-    
+    gatelay = new QVBoxLayout;
+    gatename = new QLabel;
+    gatename->setText(this->getName());
+    gatelay->addWidget(gatename);
+    inputa = new QLineEdit;
+    outputy = new QLabel;
+    gatelay->addWidget(inputa);
+    gatelay->addWidget(outputy);
+
+    QObject::connect(inputa, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
+
+}
+
+void NotGate::updateOutput(QString)
+{
+    bool a = (inputa->text() == "1");
+    this->setInputs(a);
+    outputy->setText(this->getOutput() ? "1" : "0");
+
 }
 
 void NotGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
