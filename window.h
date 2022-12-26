@@ -14,6 +14,55 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QString>
 
+class LogicGate : public QObject, public QGraphicsItem
+{
+    Q_OBJECT
+
+public:
+    LogicGate(QGraphicsItem* parent);
+    QRectF boundingRect() const override;
+    QString getName() const { return Name;}
+    QVBoxLayout* getlayout() const { return gatelay;}
+
+
+
+protected:
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+
+    QPointF lastMousePos;
+    QString Name;
+    bool moving = false;
+
+    QVBoxLayout* gatelay;
+    QLabel *gatename;
+
+private:
+    static int ExistingGates;
+
+};
+
+class Draw : public QGraphicsItem
+{
+public:
+    Draw(QGraphicsItem* parent);
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+    void setButton(QPushButton*);
+    
+    friend class LogicGate;
+
+private:
+    QPainterPath* currentPath;
+    QVector<QPainterPath*> allPaths;
+    static QPushButton* button;
+
+};
 
 class MainWindow : public QWidget
 {
@@ -45,37 +94,14 @@ private:
     //logic Gates
     // QList<LogicGate*> gateList;
 
+    //drawing
+    Draw* drawings;
+    QPushButton* drawButton;
+
     
 };
 
-class LogicGate : public QObject, public QGraphicsItem
-{
-    Q_OBJECT
 
-public:
-    LogicGate(QGraphicsItem* parent);
-    QRectF boundingRect() const override;
-    QString getName() const { return Name;}
-    QVBoxLayout* getlayout() const { return gatelay;}
-
-
-
-protected:
-    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
-    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
-    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
-
-    QPointF lastMousePos;
-    QString Name;
-    bool moving = false;
-
-    QVBoxLayout* gatelay;
-    QLabel *gatename;
-
-private:
-    static int ExistingGates;
-
-};
 
 class AndGate : public LogicGate
 {
@@ -138,6 +164,7 @@ private:
     QLineEdit* inputa;
     QLabel* outputy;
 };
+
 
 
 #endif // WINDOW_H
