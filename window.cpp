@@ -38,9 +38,9 @@ MainWindow::MainWindow()
         mainLayout->addLayout(gatesLayout);
 
         //icons
-        andGateIcon.load("/home/muchubatactics/ccpp/project/man/1x/and.png");
-        orGateIcon.load("/home/muchubatactics/ccpp/project/man/1x/or.png");
-        notGateIcon.load("/home/muchubatactics/ccpp/project/man/1x/not.png");
+        andGateIcon.load(":/1x/and.png");
+        orGateIcon.load(":/1x/or.png");
+        notGateIcon.load(":/1x/not.png");
 
 
         //setting icons
