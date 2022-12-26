@@ -48,12 +48,17 @@ private:
     
 };
 
-class LogicGate : public QGraphicsItem
+class LogicGate : public QObject, public QGraphicsItem
 {
+    Q_OBJECT
+
 public:
     LogicGate(QGraphicsItem* parent);
     QRectF boundingRect() const override;
     QString getName() const { return Name;}
+    QVBoxLayout* getlayout() const { return gatelay;}
+
+
 
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
@@ -64,6 +69,9 @@ protected:
     QString Name;
     bool moving = false;
 
+    QVBoxLayout* gatelay;
+    QLabel *gatename;
+
 private:
     static int ExistingGates;
 
@@ -71,43 +79,64 @@ private:
 
 class AndGate : public LogicGate
 {
+    Q_OBJECT
 public:
     AndGate(QGraphicsItem* parent);
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void setInputs(bool a, bool b);
     bool getOutput() const;
 
+public slots:
+    void updateOutput(QString);
+
 private:
     bool inputA = false;
     bool inputB = false;
     bool output = false;
+    QLineEdit* inputa;
+    QLineEdit* inputb;
+    QLabel* outputy;
+    
 };
 
 class OrGate : public LogicGate
 {
+    Q_OBJECT
 public:
     OrGate(QGraphicsItem* parent);
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void setInputs(bool a, bool b);
     bool getOutput() const;
 
+public slots:
+    void updateOutput(QString);
+
 private:
     bool inputA = false;
     bool inputB = false;
     bool output = false;
+    QLineEdit* inputa;
+    QLineEdit* inputb;
+    QLabel* outputy;
 };
 
 class NotGate : public LogicGate
 {
+    Q_OBJECT
 public:
     NotGate(QGraphicsItem* parent);
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void setInputs(bool a);
     bool getOutput() const;
 
+public slots:
+    void updateOutput(QString);
+
 private:
     bool inputA = false;
     bool output = false;
+    QLineEdit* inputa;
+    QLabel* outputy;
 };
 
 
