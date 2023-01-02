@@ -1,11 +1,16 @@
 #include "window.h"
 #include <iostream>
+#include <exception>
+
+
+QGraphicsView* MainWindow::canvas;
+QGraphicsScene* MainWindow::scene;
+QVector<LogicGate*> LogicGate::gates;
 
 MainWindow::MainWindow()
 {
-    //draw
-    drawings = new Draw(nullptr);
 
+    result = - 1;
     // Create a layout for the main window
     mainLayout = new QVBoxLayout(this);
     // Create a toolbar with buttons for adding gates
@@ -29,6 +34,7 @@ MainWindow::MainWindow()
     canvas = new QGraphicsView;
     scene = new QGraphicsScene;
     canvas->setScene(scene);
+    canvas->setMouseTracking(true);
     graphicsLayout->addWidget(canvas);
     mainLayout->addLayout(graphicsLayout);
     // Create a layout for the gates
@@ -48,15 +54,474 @@ MainWindow::MainWindow()
     drawButton->setCheckable(true);
     //QObject::connect(drawButton, &QPushButton::clicked, [&](){drawButton->setChecked(!drawButton->isChecked());});
     toolbarLayout->addWidget(drawButton);
-    drawings->setButton(drawButton);
-    scene->addItem(drawings);
+    Draw::setButton(drawButton);
+    draw = new Draw(nullptr);
 
+
+    //simulation
+    simButton = new QPushButton("Simulate");
+    connect(simButton, SIGNAL(clicked()), this, SLOT(simulate()));
+    toolbarLayout->addWidget(simButton);
+    simLayout = new QHBoxLayout;
+    mainLayout->addLayout(simLayout);
+    resLabel = new QLabel;
+    resLabel->setText("RESULT: " + QString::number(result));
+    simLayout->addWidget(resLabel);
 
     // Add some initial gates to the layout
     // addAndGate();
     // addOrGate();
 }
-QPushButton* Draw::button = nullptr;
+QPushButton* Draw::button;
+
+void MainWindow::simulate()
+{
+    const std::type_info& and_type = typeid(AndGate*);
+    const std::type_info& or_type = typeid(OrGate*);
+    const std::type_info& not_type = typeid(NotGate*);
+
+    std::sort(LogicGate::gates.begin(), LogicGate::gates.end(), [](const LogicGate* a, const LogicGate* b){
+        return a->pos().x() < b->pos().x();
+    });
+
+    QVector<Draw*> overlaps;
+
+    for(LogicGate* b : LogicGate::gates)
+    {
+        //if its the final gate
+        if(b == LogicGate::gates.last())
+        {
+            if(dynamic_cast<AndGate*>(b))
+            {
+                AndGate* res = dynamic_cast<AndGate*>(b);
+                result = res->getOutput() ? 1 : 0;
+                resLabel->setText("RESULT: " + QString::number(result));
+                
+            }
+            if(dynamic_cast<OrGate*>(b))
+            {
+                OrGate* res = dynamic_cast<OrGate*>(b);
+                result = res->getOutput() ? 1 : 0;
+                qDebug() << result;
+                resLabel->setText("RESULT: " + QString::number(result));
+            }
+            if(dynamic_cast<NotGate*>(b))
+            {
+                NotGate* res = dynamic_cast<NotGate*>(b);
+                result = res->getOutput() ? 1 : 0;
+                resLabel->setText("RESULT: " + QString::number(result));
+            }
+            return;
+        }
+
+        for(Draw* a : Draw::allPaths)
+        {
+            if(Draw::pathWithInregion(b, a->getPath()))
+            {
+                overlaps.append(a);
+            }
+        }
+        if(overlaps.length() == 1)
+        {
+            if(AndGate* res = dynamic_cast<AndGate*>(b))
+            {
+                qDebug() << "and " + res->getName();
+                qDebug() << res->inputA;
+                qDebug() << res->inputB;
+                qDebug() << res->getOutput();
+                if(res->ifInputsAreSet())
+                {
+                    for(LogicGate* c : LogicGate::gates)
+                    {
+                        if( c == b)
+                        {
+                            continue;
+                        }
+                        if(Draw::pathWithInregion(c, overlaps[0]->getPath()))
+                        {
+                            if(AndGate* res1 = dynamic_cast<AndGate*>(c))
+                            {
+                                if(res1->setTest == 0)
+                                {
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                                if(res1->setTest == 1)
+                                {
+                                    res1->setB(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                            }
+                            if(OrGate* res1 = dynamic_cast<OrGate*>(c))
+                            {
+                                if(res1->setTest == 0)
+                                {
+                                    qDebug() << res->getOutput();
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                                if(res1->setTest == 1)
+                                {
+                                    qDebug() << res->getOutput();
+                                    res1->setB(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                            }
+                            if(NotGate* res1 = dynamic_cast<NotGate*>(c))
+                            {
+                                if(res1->setTest == 0)
+                                {
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                            }
+                            
+                        }
+                    }
+                }
+
+            }
+            if(dynamic_cast<OrGate*>(b))
+            {
+                OrGate* res = dynamic_cast<OrGate*>(b);
+                if(res->ifInputsAreSet())
+                {
+                    for(LogicGate* c : LogicGate::gates)
+                    {
+                        if( c == b)
+                        {
+                            continue;
+                        }
+                        if(Draw::pathWithInregion(c, overlaps[0]->getPath()))
+                        {
+                            if(dynamic_cast<AndGate*>(c))
+                            {
+                                AndGate* res1 = dynamic_cast<AndGate*>(c);
+                                if(res1->setTest == 0)
+                                {
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                                if(res1->setTest == 1)
+                                {
+                                    res1->setB(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                                
+                            }
+                            if(dynamic_cast<OrGate*>(c))
+                            {
+                                OrGate* res1 = dynamic_cast<OrGate*>(c);
+                                if(res1->setTest == 0)
+                                {
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                                if(res1->setTest == 1)
+                                {
+                                    res1->setB(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                            }
+                            if(dynamic_cast<NotGate*>(c))
+                            {
+                                NotGate* res1 = dynamic_cast<NotGate*>(c);
+                                if(res1->setTest == 0)
+                                {
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                            }
+                            
+                        }
+                    }
+                }
+                
+            }
+            if(dynamic_cast<NotGate*>(b))
+            {
+                NotGate* res = dynamic_cast<NotGate*>(b);
+                if(res->ifInputsAreSet())
+                {
+                    for(LogicGate* c : LogicGate::gates)
+                    {
+                        if(c == b)
+                        {
+                            continue;
+                        }
+                        if(Draw::pathWithInregion(c, overlaps[0]->getPath()))
+                        {
+                            if(dynamic_cast<AndGate*>(c))
+                            {
+                                AndGate* res1 = dynamic_cast<AndGate*>(c);
+                                if(res1->setTest == 0)
+                                {
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                                if(res1->setTest == 1)
+                                {
+                                    res1->setB(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                            }
+                            if(dynamic_cast<OrGate*>(c))
+                            {
+                                OrGate* res1 = dynamic_cast<OrGate*>(c);
+                                if(res1->setTest == 0)
+                                {
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                                if(res1->setTest == 1)
+                                {
+                                    res1->setB(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                            }
+                            if(dynamic_cast<NotGate*>(c))
+                            {
+                                NotGate* res1 = dynamic_cast<NotGate*>(c);
+                                if(res1->setTest == 0)
+                                {
+                                    res1->setA(res->getOutput());
+                                    res1->setTest++;
+                                    break;
+                                }
+                            }
+                            
+                        }
+                    }
+                }
+                
+            }
+
+        }
+        if(overlaps.length() == 2)
+        {
+            //if it overlaps with only 2 paths then its a not gate or a final gate, but we already have a test for final gate;
+            NotGate* res = dynamic_cast<NotGate*>(b);
+            std::sort(overlaps.begin(), overlaps.end(), [](const Draw* a, const Draw* b){
+                return a->getPath()->boundingRect().x() < b->getPath()->boundingRect().x();
+            });
+            for(LogicGate* c : LogicGate::gates)
+            {
+                if(c == b)
+                {
+                    continue;
+                }
+                if(Draw::pathWithInregion(c,overlaps.last()->getPath()))
+                {
+                    if(dynamic_cast<AndGate*>(c))
+                    {
+                        AndGate* res1 = dynamic_cast<AndGate*>(c);
+                        if(res1->setTest == 0)
+                        {
+                            res1->setA(res->getOutput());
+                            res1->setTest++;
+                            break;
+                        }
+                        if(res1->setTest == 1)
+                        {
+                            res1->setB(res->getOutput());
+                            res1->setTest++;
+                            break;
+                        }
+                    }
+                    if(dynamic_cast<OrGate*>(c))
+                    {
+                        OrGate* res1 = dynamic_cast<OrGate*>(c);
+                        if(res1->setTest == 0)
+                        {
+                            res1->setA(res->getOutput());
+                            res1->setTest++;
+                            break;
+                        }
+                        if(res1->setTest == 1)
+                        {
+                            res1->setB(res->getOutput());
+                            res1->setTest++;
+                            break;
+                        }
+                        
+                    }
+                    if(dynamic_cast<NotGate*>(c))
+                    {
+                        NotGate* res1 = dynamic_cast<NotGate*>(c);
+                        if(res1->setTest == 0)
+                        {
+                            res1->setA(res->getOutput());
+                            res1->setTest++;
+                            break;
+                        }
+                    }                            
+                }
+            }
+            
+    
+        }
+        if(overlaps.length() == 3)
+        {
+            std::sort(overlaps.begin(), overlaps.end(), [](const Draw* a, const Draw* b){
+                return a->getPath()->boundingRect().x() < b->getPath()->boundingRect().x();
+            });
+            if(dynamic_cast<AndGate*>(b))
+            {
+                AndGate* res = dynamic_cast<AndGate*>(b);
+                for(LogicGate* c : LogicGate::gates)
+                {
+                    if(c == b)
+                    {
+                        continue;
+                    }
+                    if(Draw::pathWithInregion(c, overlaps.last()->getPath()))
+                    {
+                        if(dynamic_cast<AndGate*>(c))
+                        {
+                            AndGate* res1 = dynamic_cast<AndGate*>(c);
+                            if(res1->setTest == 0)
+                            {
+                                res1->setA(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                            if(res1->setTest == 1)
+                            {
+                                res1->setB(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                            
+                        }
+                        if(dynamic_cast<OrGate*>(c))
+                        {
+                            OrGate* res1 = dynamic_cast<OrGate*>(c);
+                            if(res1->setTest == 0)
+                            {
+                                res1->setA(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                            if(res1->setTest == 1)
+                            {
+                                res1->setB(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                            
+                        }
+                        if(dynamic_cast<NotGate*>(c))
+                        {
+                            NotGate* res1 = dynamic_cast<NotGate*>(c);
+                            if(res1->setTest == 0)
+                            {
+                                res1->setA(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                        }                            
+                    }
+                }
+
+            }
+            if(dynamic_cast<OrGate*>(b))
+            {
+                OrGate* res = dynamic_cast<OrGate*>(b);
+                for(LogicGate* c : LogicGate::gates)
+                {
+                    if(c == b)
+                    {
+                        continue;
+                    }
+                    if(Draw::pathWithInregion(c, overlaps.last()->getPath()))
+                    {
+                        if(dynamic_cast<AndGate*>(c))
+                        {
+                            AndGate* res1 = dynamic_cast<AndGate*>(c);
+                            if(res1->setTest == 0)
+                            {
+                                res1->setA(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                            if(res1->setTest == 1)
+                            {
+                                res1->setB(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                          
+                        }
+                        if(dynamic_cast<OrGate*>(c))
+                        {
+                            OrGate* res1 = dynamic_cast<OrGate*>(c);
+                            if(res1->setTest == 0)
+                            {
+                                res1->setA(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                            if(res1->setTest == 1)
+                            {
+                                res1->setB(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                          
+                        }
+                        if(dynamic_cast<NotGate*>(c))
+                        {
+                            NotGate* res1 = dynamic_cast<NotGate*>(c);
+                            if(res1->setTest == 0)
+                            {
+                                res1->setA(res->getOutput());
+                                res1->setTest++;
+                                break;
+                            }
+                        }                            
+                    }
+                }
+
+            }
+        }
+        overlaps.clear();
+    }
+
+
+    for(auto a : LogicGate::gates)
+    {
+        if(AndGate* res = dynamic_cast<AndGate*>(a))
+        {
+            res->setTest = 0;
+        }
+        if(OrGate* res = dynamic_cast<OrGate*>(a))
+        {
+            res->setTest = 0;
+        }
+        if(NotGate* res = dynamic_cast<NotGate*>(a))
+        {
+            res->setTest = 0;        
+        }
+
+    }
+
+    
+}
+
 void MainWindow::addAndGate()
 {
     AndGate* andgate = new AndGate(nullptr);
@@ -85,12 +550,14 @@ int LogicGate::ExistingGates = 0;
 
 LogicGate::LogicGate(QGraphicsItem* parent = nullptr) : QGraphicsItem(parent)
 {
+    setTest = 0;
     ExistingGates++;
     Name = QString::number(ExistingGates);
 }
 
 void LogicGate::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    QGraphicsItem::mousePressEvent(event);
     if (event->button() == Qt::LeftButton && !Draw::button->isChecked())
     {
         moving = true;
@@ -101,14 +568,16 @@ void LogicGate::mousePressEvent(QGraphicsSceneMouseEvent *event)
     {
         event->ignore();
     }
+    update();
 }
 
 void LogicGate::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    QGraphicsItem::mouseMoveEvent(event);
     if (moving)
     {
         QPointF delta = event->pos() - lastMousePos;
-        setPos(pos() + delta);
+        this->setPos(this->pos() + delta);
         lastMousePos = event->pos();
         event->accept();
     }
@@ -116,10 +585,12 @@ void LogicGate::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     {
         event->ignore();
     }
+    update();
 }
 
 void LogicGate::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
+    QGraphicsItem::mouseReleaseEvent(event);
     if (event->button() == Qt::LeftButton && !Draw::button->isChecked())
     {
         moving = false;
@@ -129,6 +600,7 @@ void LogicGate::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     {
         event->ignore();
     }
+    update();
 }
 
 QRectF LogicGate::boundingRect() const
@@ -153,6 +625,8 @@ AndGate::AndGate(QGraphicsItem *parent) : LogicGate(parent)
     QObject::connect(inputa, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
     QObject::connect(inputb, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
 
+    gates.append(this);
+
 }
 
 void AndGate::updateOutput(QString)
@@ -161,6 +635,7 @@ void AndGate::updateOutput(QString)
     bool b = (inputb->text() == "1");
     this->setInputs(a,b);
     outputy->setText(this->getOutput() ? "1" : "0");
+    update();
 
 }
 void AndGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
@@ -187,7 +662,7 @@ void AndGate::setInputs(bool a, bool b)
 
 bool AndGate::getOutput() const
 {
-    return output;
+    return inputA && inputB;
 }
 
 OrGate::OrGate(QGraphicsItem *parent = nullptr) : LogicGate(parent)
@@ -205,6 +680,7 @@ OrGate::OrGate(QGraphicsItem *parent = nullptr) : LogicGate(parent)
 
     QObject::connect(inputa, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
     QObject::connect(inputb, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
+    gates.append(this);
 
 }
 
@@ -214,6 +690,7 @@ void OrGate::updateOutput(QString)
     bool b = (inputb->text() == "1");
     this->setInputs(a,b);
     outputy->setText(this->getOutput() ? "1" : "0");
+    update();
 
 }
 
@@ -241,7 +718,7 @@ void OrGate::setInputs(bool a, bool b)
 
 bool OrGate::getOutput() const
 {
-    return output;
+    return inputA || inputB;
 }
 
 NotGate::NotGate(QGraphicsItem *parent = nullptr) : LogicGate(parent)
@@ -256,6 +733,7 @@ NotGate::NotGate(QGraphicsItem *parent = nullptr) : LogicGate(parent)
     gatelay->addWidget(outputy);
 
     QObject::connect(inputa, SIGNAL(textChanged(QString)), this, SLOT(updateOutput(QString)));
+    gates.append(this);
 
 }
 
@@ -264,6 +742,7 @@ void NotGate::updateOutput(QString)
     bool a = (inputa->text() == "1");
     this->setInputs(a);
     outputy->setText(this->getOutput() ? "1" : "0");
+    update();
 
 }
 
@@ -288,15 +767,17 @@ void NotGate::setInputs(bool a)
 
 bool NotGate::getOutput() const
 {
-    return output;
+    return !inputA;
 }
 
 
 //drawing
+QVector<Draw*> Draw::allPaths;
 
 Draw::Draw(QGraphicsItem* parent = nullptr) : QGraphicsItem(parent)
 {
     currentPath = new QPainterPath;
+    MainWindow::scene->addItem(this);
 } 
 
 QRectF Draw::boundingRect() const
@@ -309,9 +790,9 @@ void Draw::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
     QPen pen;
     pen.setWidth(5);
     painter->setPen(pen);
-    for(QPainterPath* path : allPaths)
+    for(Draw* path : allPaths)
     {
-        painter->drawPath(*path);
+        painter->drawPath(*path->getPath());
     }
 }
 
@@ -319,26 +800,29 @@ void Draw::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
     if(button->isChecked())
     {
-        currentPath->moveTo(event->pos());
+        Draw* newPath = new Draw(nullptr);
+        allPaths.append(newPath);
+        newPath->currentPath->moveTo(event->pos());
         update();    
     }
 }
+
 
 void Draw::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     if(button->isChecked())
     {
-        currentPath->lineTo(event->pos());
+        Draw* currentPath = allPaths.last();
+        currentPath->currentPath->lineTo(event->pos());
         update();
     }
 }
 
 void Draw::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
+
     if(button->isChecked())
     {
-        allPaths.append(currentPath);
-        currentPath = new QPainterPath;
         update();
     }
 }
@@ -346,4 +830,69 @@ void Draw::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 void Draw::setButton(QPushButton* bb)
 {
     button = bb;
+}
+
+
+void Draw::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
+{
+    std::cout << "\nDouble click\n";
+    QList<QGraphicsView*> views = this->scene()->views();
+    QGraphicsView *view = views.first();
+    view->setRenderHint(QPainter::Antialiasing);
+    view->setMouseTracking(true);
+    QGraphicsItem *item = this->scene()->itemAt(view->mapToScene(event->pos().toPoint()), view->transform());
+    if(item && qgraphicsitem_cast<QGraphicsPathItem*>(item))
+    {
+        std::cout << "\neh\n";
+        for(int i = 0; i < allPaths.size(); i++)
+        {
+            if(qgraphicsitem_cast<QGraphicsPathItem*>(item) == qgraphicsitem_cast<QGraphicsPathItem*>(allPaths[i]))
+            {
+                allPaths.remove(i);
+                break;
+            }
+        }
+        this->scene()->removeItem(item);
+        this->update();
+    }
+}
+
+
+QPainterPath* Draw::getPath() const
+{
+    return currentPath;
+}
+
+
+QList<QGraphicsItem *> Draw::overlappedGates(QGraphicsScene* scene)
+{
+    QList<QGraphicsItem* > theList;
+    for(Draw* path : allPaths)
+    {
+        QList<QGraphicsItem *> temp = scene->items(*path->getPath());
+        std::cout << "\nerere "<< temp.length() << "\n";
+        for(QGraphicsItem* item : temp)
+        {
+            theList.append(item);
+    
+        }
+    }
+
+    return theList;
+
+}
+
+bool Draw::pathWithInregion(QGraphicsItem* item, QPainterPath* path)
+{
+    QRegion a(QRect(item->pos().x() - 50, item->pos().y() - 50, 100, 100));
+    QPoint b = path->pointAtPercent(0).toPoint();
+    QPoint c = path->pointAtPercent(1).toPoint();
+    if(a.contains(b) || a.contains(c))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
