@@ -13,17 +13,27 @@
 #include <QLineEdit>
 #include <QGraphicsSceneMouseEvent>
 #include <QString>
+#include <QDebug>
+#include <QRegion>
 
 class LogicGate : public QObject, public QGraphicsItem
 {
     Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
 
 public:
     LogicGate(QGraphicsItem* parent);
     QRectF boundingRect() const override;
     QString getName() const { return Name;}
     QVBoxLayout* getlayout() const { return gatelay;}
+    virtual int forCast() = 0;
 
+    void setPosition(const QPointF& pos)
+    {
+        position = pos;
+    }
+
+    friend class MainWindow;
 
 
 protected:
@@ -37,6 +47,12 @@ protected:
 
     QVBoxLayout* gatelay;
     QLabel *gatename;
+    static QVector<LogicGate*> gates;
+
+    int setTest;
+    QPointF position;
+    qreal height = 100;
+    qreal width = 100;
 
 private:
     static int ExistingGates;
@@ -53,16 +69,22 @@ public:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
-    void setButton(QPushButton*);
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
+    static void setButton(QPushButton*);
+    static QList<QGraphicsItem *> overlappedGates(QGraphicsScene* scene);
+    static bool pathWithInregion(QGraphicsItem*, QPainterPath*);
+    QPainterPath* getPath() const;
     
     friend class LogicGate;
+    friend class MainWindow;
 
 private:
-    QPainterPath* currentPath;
-    QVector<QPainterPath*> allPaths;
+    static QVector<Draw*> allPaths;
     static QPushButton* button;
-
+    QPainterPath* currentPath;
 };
+
+
 
 class MainWindow : public QWidget
 {
@@ -70,10 +92,13 @@ class MainWindow : public QWidget
 public:
     MainWindow();
     ~MainWindow(){}
+
+    friend class Draw;
 public slots:
     void addAndGate();
     void addOrGate();
     void addNotGate();
+    void simulate();
 
 private:
     //icons
@@ -88,15 +113,23 @@ private:
     QHBoxLayout* gatesLayout;
 
     //graphic scene
-    QGraphicsView* canvas;
-    QGraphicsScene* scene;
+    static QGraphicsView* canvas;
+    static QGraphicsScene* scene;
 
     //logic Gates
     // QList<LogicGate*> gateList;
 
     //drawing
-    Draw* drawings;
     QPushButton* drawButton;
+    Draw* draw;
+    
+
+    //simulation
+    QPushButton* simButton;
+    QHBoxLayout* simLayout;
+    QLabel* resLabel;
+
+    int result;
 
     
 };
@@ -111,17 +144,46 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void setInputs(bool a, bool b);
     bool getOutput() const;
+    virtual int forCast() {return 1;}
+    bool ifInputsAreSet()
+    {
+        if(inputa->text().isEmpty() || inputb->text().isEmpty())
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
 
-public slots:
-    void updateOutput(QString);
-
-private:
+    void setA(bool a) 
+    {
+        inputA = a;
+        output = inputA && inputB;
+        update();
+        inputa->setText(QString::number(a ? 1 : 0)); 
+        outputy->setText(QString::number(this->getOutput() ? 1 : 0));
+    }
+    void setB(bool b) 
+    {
+        inputB = b;
+        output = inputA && inputB;
+        update(); 
+        inputb->setText(QString::number(b ? 1 : 0)); 
+        outputy->setText(QString::number(this->getOutput() ? 1 : 0));
+    }
     bool inputA = false;
     bool inputB = false;
     bool output = false;
     QLineEdit* inputa;
     QLineEdit* inputb;
     QLabel* outputy;
+
+public slots:
+    void updateOutput(QString);
+
+private:
     
 };
 
@@ -133,17 +195,47 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void setInputs(bool a, bool b);
     bool getOutput() const;
+    virtual int forCast() {return 2;}
+    bool ifInputsAreSet()
+    {
+        if(inputa->text().isEmpty() || inputb->text().isEmpty())
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
 
-public slots:
-    void updateOutput(QString);
+    void setA(bool a) 
+    {
+        inputA = a;
+        output = inputA || inputB;
+        update();
+        inputa->setText(QString::number(a ? 1 : 0)); 
+        outputy->setText(QString::number(this->getOutput() ? 1 : 0));
+    }
+    void setB(bool b) 
+    {
+        inputB = b;
+        output = inputA || inputB;
+        update(); 
+        inputb->setText(QString::number(b ? 1 : 0)); 
+        outputy->setText(QString::number(this->getOutput() ? 1 : 0));
+    }
 
-private:
     bool inputA = false;
     bool inputB = false;
     bool output = false;
     QLineEdit* inputa;
     QLineEdit* inputb;
     QLabel* outputy;
+
+public slots:
+    void updateOutput(QString);
+
+private:
 };
 
 class NotGate : public LogicGate
@@ -154,6 +246,28 @@ public:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void setInputs(bool a);
     bool getOutput() const;
+    virtual int forCast() {return 3;}
+    bool ifInputsAreSet()
+    {
+        if(inputa->text().isEmpty())
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    void setA(bool a) 
+    {
+        inputA = a;
+        output = !inputA;
+        update();
+        inputa->setText(QString::number(a ? 1 : 0)); 
+        outputy->setText(QString::number(this->getOutput() ? 1 : 0));
+    }
+
 
 public slots:
     void updateOutput(QString);
